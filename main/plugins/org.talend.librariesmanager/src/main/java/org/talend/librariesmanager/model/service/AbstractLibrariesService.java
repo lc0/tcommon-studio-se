@@ -86,7 +86,6 @@ public abstract class AbstractLibrariesService implements ILibrariesService {
 
     @Override
     public ELibraryInstallStatus getLibraryStatus(String libName) throws BusinessException {
-        checkInstalledLibraries();
         for (ModuleNeeded current : ModulesNeededProvider.getModulesNeeded()) {
             if (current.getModuleName().equals(libName)) {
                 return current.getStatus();
