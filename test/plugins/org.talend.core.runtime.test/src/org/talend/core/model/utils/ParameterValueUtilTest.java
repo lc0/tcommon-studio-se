@@ -76,15 +76,6 @@ public class ParameterValueUtilTest {
         retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
-        // test case 6
-        // to ensure it can be replace the correct Strings
-        // testString :
-        // "context" + "context"+""+context+"context" + context+" "
-        testString = "\"context\" + \"context\"+\"\"+context+\"context\" + context+\" \"";
-        expectRetValue = "\"context\" + \"context\"+\"\"+context.db+\"context\" + context.db+\" \"";
-        retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
-        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
-
         // test case 7
         // all are empty
         // testString :
@@ -94,23 +85,41 @@ public class ParameterValueUtilTest {
         retValue = ParameterValueUtil.splitQueryData("", "", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
-        // test case 8
-        // many same varibles
-        // testString :
-        // "contextA"+context+"contextB"+context+"contextC" + context+" "
-        testString = "\"contextA\"+context+\"contextB\"+context+\"contextC\" + context+\" \"";
-        expectRetValue = "\"contextA\"+context.db+\"contextB\"+context.db+\"contextC\" + context.db+\" \"";
-        retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
+        // test case 10
+        // "SELECT
+        // "+context.ORA_VIRTULIA_Schema+".PER_ETATCIVIL.IDE_DOSSIER,
+        // "+context.ORA_VIRTULIA_Schema+".PER_ETATCIVIL.QUALITE,
+        // "+context.ORA_VIRTULIA_Schema+".PER_ETATCIVIL.NOM
+        // FROM "+context.ORA_VIRTULIA_Schema+".PER_ETATCIVIL"
+        // this function should not replace constant
+        testString = "\"SELECT \r\n" + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.IDE_DOSSIER,\r\n"
+                + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.QUALITE,\r\n"
+                + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.NOM\r\n"
+                + "FROM \"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL\"";
+        expectRetValue = "\"SELECT \r\n" + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.IDE_DOSSIER,\r\n"
+                + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.QUALITE,\r\n"
+                + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.NOM\r\n"
+                + "FROM \"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL\"";
+        retValue = ParameterValueUtil.splitQueryData("PER_ETATCIVIL.IDE_DOSSIER", "simplejoblet_1_PER_ETATCIVIL.IDE_DOSSIER",
+                testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
-        // test case 9
-        // testString :
-        // "contextA"+contextA+"contextB"+context+"contextC" + context+" "
-        testString = "\"contextA\"+contextA+\"contextB\"+context+\"contextC\" + context+\" \"";
-        expectRetValue = "\"contextA\"+contextA+\"contextB\"+context.db+\"contextC\" + context.db+\" \"";
-        retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
+        testString = "\"SELECT \r\n" + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.IDE_DOSSIER,\r\n"
+                + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.QUALITE,\r\n"
+                + "\"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL.NOM\r\n"
+                + "FROM \"+context.ORA_VIRTULIA_Schema+\".PER_ETATCIVIL\"";
+        expectRetValue = "\"SELECT \r\n" + "\"+context.ORA_CHANGE_Schema+\".PER_ETATCIVIL.IDE_DOSSIER,\r\n"
+                + "\"+context.ORA_CHANGE_Schema+\".PER_ETATCIVIL.QUALITE,\r\n"
+                + "\"+context.ORA_CHANGE_Schema+\".PER_ETATCIVIL.NOM\r\n"
+                + "FROM \"+context.ORA_CHANGE_Schema+\".PER_ETATCIVIL\"";
+        retValue = ParameterValueUtil.splitQueryData("context.ORA_VIRTULIA_Schema", "context.ORA_CHANGE_Schema", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
+        testString = "no match";
+        expectRetValue = "no match";
+        retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
+        Assert.assertTrue(retValue != null && !"".equals(retValue));
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
     }
 
 }

@@ -12,7 +12,6 @@
 // ============================================================================
 package org.talend.core.model.utils;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -20,9 +19,11 @@ import java.util.regex.Matcher;
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.apache.oro.text.regex.Pattern;
 import org.apache.oro.text.regex.PatternCompiler;
+import org.apache.oro.text.regex.PatternMatcher;
 import org.apache.oro.text.regex.Perl5Compiler;
 import org.apache.oro.text.regex.Perl5Matcher;
 import org.apache.oro.text.regex.Perl5Substitution;
+import org.apache.oro.text.regex.Substitution;
 import org.apache.oro.text.regex.Util;
 import org.eclipse.emf.common.util.EList;
 import org.talend.core.model.context.UpdateContextVariablesHelper;
@@ -46,8 +47,9 @@ public final class ParameterValueUtil {
             return;
         }
         boolean flag = true;
-        if (param.getFieldType() == EParameterFieldType.MEMO_SQL)
+        if (param.getFieldType() == EParameterFieldType.MEMO_SQL) {
             flag = false;
+        }
         if (param.getValue() instanceof String) { // for TEXT / MEMO etc..
             String value = (String) param.getValue();
             if (value.contains(oldName)) {
@@ -100,6 +102,7 @@ public final class ParameterValueUtil {
             // replace
             String returnValue = "";
             if (value.contains(TalendQuoteUtils.getQuoteChar()) && !flag) {
+                // returnValue = splitQueryData(matcher, pattern, substitution, value, Util.SUBSTITUTE_ALL);
                 returnValue = splitQueryData(oldName, newName, value);
             } else {
                 returnValue = Util.substitute(matcher, pattern, substitution, value, Util.SUBSTITUTE_ALL);
@@ -111,55 +114,95 @@ public final class ParameterValueUtil {
 
     }
 
+    // function before TDI-29092 modify,this function seems only rename variables in context,I put this funciton back
+    // incase any problem with the new function and we can refer the old one to check the problem.
+    public static String splitQueryData(PatternMatcher matcher, Pattern pattern, Substitution sub, String value, int numSubs) {
+        String[] split = value.split("\"");
+        int i = 0;
+        String replace = "";
+        for (String s : split) {
+            if (i % 2 == 0) {
+                replace = s;
+                if (i != 0) {
+                    if (matcher.contains(value, pattern)) {
+                        replace = split[i].toString();
+                        split[i] = Util.substitute(matcher, pattern, sub, replace, numSubs);
+                    }
+                }
+            }
+            i++;
+        }
+        String returnValue = "";
+        for (int t = 1; t < split.length; t++) {
+            if (t % 2 == 0) {
+                returnValue += split[t];
+            } else {
+                returnValue += "\"" + split[t] + "\"";
+            }
+        }
+        return returnValue;
+    }
+
     // for bug 12594 split "; for bug 29092(it has JUnits)
     public static String splitQueryData(String oldName, String newName, String value) {
         // example:"drop table "+context.oracle_schema+".\"TDI_26803\""
         // >>>>>>>>_△_(const)__ _____△_(varible)_______ __△_(const)___
-        String regex = "\"\"|\".*?([^\\\\]\")";
+        String regex = "(?<!\\\")(\\s*context\\s*.\\s*\\w+\\s*)(?<!\\\")";
         // obtain all varibles
-        String[] split = value.split(regex);
-        Map<String, String> replacedStrings = new HashMap<String, String>();
+        // String[] split = value.split(regex);
+        // Map<String, String> replacedStrings = new HashMap<String, String>();
         String returnValue = "";
-        // replace the variables & store both value of old and new
-        for (String s : split) {
-            if (s.contains(oldName)) {
-                replacedStrings.put(s, s.replaceAll("\\b" + oldName + "\\b", newName));
-            }
-        }
+        // // replace the variables & store both value of old and new
+        // for (String s : split) {
+        // if (s.contains(oldName)) {
+        // replacedStrings.put(s, s.replaceAll("\\b" + oldName + "\\b", newName));
+        // }
+        // }
         // obtain consts & concat the consts with the variables
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
         Matcher matcher = pattern.matcher(value);
         if (matcher.find()) {
+            String group = matcher.group();
+            String newGroup = group;
+            boolean hasStartChar = false;
+            boolean hasEndChar = false;
             int x = matcher.start();
             int y = matcher.end();
             int curPos = 0;
             int valueLength = value.length();
             String oldFill = null;
-            String newFill = null;
+
             while (true) {
                 if (curPos == valueLength) {
                     break;
                 }
                 if (curPos < x) {
                     oldFill = value.substring(curPos, x);
-                    if ((newFill = replacedStrings.get(oldFill)) != null) {
-                        returnValue += newFill;
-                    } else {
-                        returnValue += oldFill;
-                    }
+                    returnValue += oldFill;
                     curPos = x;
                     continue;
                 }
-                returnValue += matcher.group();
+                if (oldName != null && newGroup.replaceAll("\\s", "").equals(oldName.replaceAll("\\s", ""))) {
+                    returnValue += newName;
+                } else {
+                    returnValue += group;
+                }
                 curPos = y;
                 if (!matcher.find()) {
                     x = valueLength;
                 } else {
                     x = matcher.start();
                     y = matcher.end();
+                    group = matcher.group();
+                    newGroup = group;
                 }
             }
         }
+
+        if (returnValue.isEmpty()) {
+            returnValue = value;
+        }
+
         return returnValue;
     }
 
@@ -200,7 +243,7 @@ public final class ParameterValueUtil {
                 for (ElementValueType valueType : (List<ElementValueType>) elementValue) {
                     if (valueType.getValue() != null) { // cell is text so
                         // test data
-                        if (ParameterValueUtil.valueContains((String) valueType.getValue(), name)) {
+                        if (ParameterValueUtil.valueContains(valueType.getValue(), name)) {
                             return true;
                         }
                     }
