@@ -2367,6 +2367,21 @@ public class RepositoryToComponentProperty {
                 return TalendQuoteUtils.addQuotes(connection.getKeystorePassword());
             }
         }
+        if (value.equals("PRIVATEKEY")) {
+            if (isContextMode(connection, connection.getPrivatekey())) {
+                return connection.getPrivatekey();
+            } else {
+                return TalendQuoteUtils.addQuotes(connection.getPrivatekey());
+            }
+        }
+
+        if (value.equals("PASSPHRASE")) {
+            if (isContextMode(connection, connection.getPassphrase())) {
+                return connection.getPassphrase();
+            } else {
+                return TalendQuoteUtils.addQuotes(connection.getPassphrase());
+            }
+        }
         if (value.equals("AUTH_METHOD")) {
             if (isContextMode(connection, connection.getMethod())) {
                 return connection.getMethod();
