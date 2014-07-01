@@ -9,5 +9,12 @@
               name="javax.ws.rs-api-2.0-m10.jar"
               required="true">
         </libraryNeeded>
+        <libraryNeeded
+              context="plugin:org.talend.libraries.apache.cxf"
+              language="java"
+              message="Needed for the cxf dependencies"
+              name="woodstox-core-asl-4.2.0.jar"
+              required="true">
+        </libraryNeeded>
     </extension>
 </plugin>
