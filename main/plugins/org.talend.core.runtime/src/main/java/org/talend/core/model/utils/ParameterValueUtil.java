@@ -12,9 +12,10 @@
 // ============================================================================
 package org.talend.core.model.utils;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
+import java.util.Map.Entry;
 
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.apache.oro.text.regex.Pattern;
@@ -147,63 +148,104 @@ public final class ParameterValueUtil {
     public static String splitQueryData(String oldName, String newName, String value) {
         // example:"drop table "+context.oracle_schema+".\"TDI_26803\""
         // >>>>>>>>_△_(const)__ _____△_(varible)_______ __△_(const)___
-        String regex = "(?<!\\\")(\\s*context\\s*.\\s*\\w+\\s*)(?<!\\\")";
-        // obtain all varibles
-        // String[] split = value.split(regex);
-        // Map<String, String> replacedStrings = new HashMap<String, String>();
-        String returnValue = "";
-        // // replace the variables & store both value of old and new
-        // for (String s : split) {
-        // if (s.contains(oldName)) {
-        // replacedStrings.put(s, s.replaceAll("\\b" + oldName + "\\b", newName));
-        // }
-        // }
-        // obtain consts & concat the consts with the variables
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(value);
-        if (matcher.find()) {
-            String group = matcher.group();
-            String newGroup = group;
-            boolean hasStartChar = false;
-            boolean hasEndChar = false;
-            int x = matcher.start();
-            int y = matcher.end();
-            int curPos = 0;
-            int valueLength = value.length();
-            String oldFill = null;
 
-            while (true) {
-                if (curPos == valueLength) {
-                    break;
+        final int length = value.length();
+        // quotaStrings which stores the start and end point for all const strings in the value
+        LinkedHashMap<Integer, Integer> quotaStrings = new LinkedHashMap<Integer, Integer>();
+
+        // get and store all start and end point of const strings
+        int start = -1;
+        int end = -2;
+        char ch;
+        for (int i = 0; i < length; i++) {
+            ch = value.charAt(i);
+            if (ch == '\"') {
+                // in case of cases :
+                // case 1 : [ "select * from " + context.table + " where value = \"context.table\"" ]
+                // case 2 : [ "select * from " + context.table + " where value = \"\\" + context.table +
+                // "\\context.table\"" ]
+                if (0 < i) {
+                    boolean isEscapeSequence = false;
+                    for (int index = i; 0 < index; index--) {
+                        if (value.charAt(index - 1) == '\\') {
+                            isEscapeSequence = !isEscapeSequence;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (isEscapeSequence) {
+                        continue;
+                    }
                 }
-                if (curPos < x) {
-                    oldFill = value.substring(curPos, x);
-                    returnValue += oldFill;
-                    curPos = x;
-                    continue;
-                }
-                if (oldName != null && newGroup.replaceAll("\\s", "").equals(oldName.replaceAll("\\s", ""))) {
-                    returnValue += newName;
+
+                // [0 <= start] >> in case the first const String position compute error
+                if (0 <= start && end < start) {
+                    end = i;
+                    quotaStrings.put(start, end);
                 } else {
-                    returnValue += group;
-                }
-                curPos = y;
-                if (!matcher.find()) {
-                    x = valueLength;
-                } else {
-                    x = matcher.start();
-                    y = matcher.end();
-                    group = matcher.group();
-                    newGroup = group;
+                    start = i;
                 }
             }
         }
 
-        if (returnValue.isEmpty()) {
-            returnValue = value;
+        {
+            // in case the value has not complete quota
+            // exapmle > "select a,context.b from " + context.b + "where value = context.b
+
+            // **but** maybe more impossible truth is that
+            // they write this(context.b) just want to use it as a varible...
+            // so maybe should not set the string behind the quota as a const by default..
+
+            // ---▽--- the following code is set the string behind the quota as a const
+
+            // if (0 <= start && end < start) {
+            // end = length - 1;
+            // quotaStrings.put(start, end);
+            // }
         }
 
-        return returnValue;
+        // find the varible string, do replace, then concat them
+        StringBuffer strBuffer = new StringBuffer();
+        String subString = null;
+        int vStart = 0;
+        int vEnd = 0;
+        start = 0;
+        end = 0;
+        for (Entry<Integer, Integer> entry : quotaStrings.entrySet()) {
+            start = entry.getKey();
+            end = entry.getValue() + 1;
+            if (start == 0) {
+                // the value begin with const string
+                subString = value.substring(start, end);
+            } else {
+                vEnd = start;
+                if (vStart == start) {
+                    // const string follow with const string, maybe won't happen...
+                    // get the const string
+                    subString = value.substring(start, end);
+                } else {
+                    // get the varible string, do replace, then append it
+                    subString = value.substring(vStart, vEnd);
+                    strBuffer.append(subString.replaceAll("\\b" + oldName + "\\b", newName)); //$NON-NLS-1$//$NON-NLS-2$
+                    // get the const string
+                    subString = value.substring(start, end);
+                }
+            }
+            // append the const string
+            strBuffer.append(subString);
+            // update the varible string start point
+            vStart = end;
+        }
+
+        // in case the last string of the value is a const string
+        // then get it, and do replace, finally append it.
+        if (vStart < length) {
+            vEnd = length;
+            subString = value.substring(vStart, vEnd);
+            strBuffer.append(subString.replaceAll("\\b" + oldName + "\\b", newName)); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+
+        return strBuffer.toString();
     }
 
     public static boolean isUseData(final IElementParameter param, final String name) {

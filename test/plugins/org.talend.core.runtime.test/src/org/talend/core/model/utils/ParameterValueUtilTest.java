@@ -85,6 +85,23 @@ public class ParameterValueUtilTest {
         retValue = ParameterValueUtil.splitQueryData("", "", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
+        // test case 8
+        // many same varibles
+        // testString :
+        // "contextA"+context+"contextB"+context+"contextC" + context+" "
+        testString = "\"contextA\"+context+\"contextB\"+context+\"contextC\" + context+\" \"";
+        expectRetValue = "\"contextA\"+context.db+\"contextB\"+context.db+\"contextC\" + context.db+\" \"";
+        retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 9
+        // testString :
+        // "contextA"+contextA+"contextB"+context+"contextC" + context+" "
+        testString = "\"contextA\"+contextA+\"contextB\"+context+\"contextC\" + context+\" \"";
+        expectRetValue = "\"contextA\"+contextA+\"contextB\"+context.db+\"contextC\" + context.db+\" \"";
+        retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
         // test case 10
         // "SELECT
         // "+context.ORA_VIRTULIA_Schema+".PER_ETATCIVIL.IDE_DOSSIER,
@@ -120,6 +137,64 @@ public class ParameterValueUtilTest {
         retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
         Assert.assertTrue(retValue != null && !"".equals(retValue));
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 11
+        // testString : "select * from " + context.table + " where value = \"value from context.table\""
+        // expectString : "select * from " + context.table1 + " where value = \"value from context.table\""
+        testString = "\"select * from \" + context.table + \" where value = \\\"value from context.table\\\"\"";
+        expectRetValue = "\"select * from \" + context.table1 + \" where value = \\\"value from context.table\\\"\"";
+        retValue = ParameterValueUtil.splitQueryData("context.table", "context.table1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 12
+        // testString : "select * from " + context.table + " where value = \"context.table\""
+        // expectString : "select * from " + context.table1 + " where value = \"context.table\""
+        testString = "\"select * from \" + context.table + \" where value = \\\"context.table\\\"\"";
+        expectRetValue = "\"select * from \" + context.table1 + \" where value = \\\"context.table\\\"\"";
+        retValue = ParameterValueUtil.splitQueryData("context.table", "context.table1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 13
+        // testString : "select * from " + context.table + " where value = \"context.table\"" + context.table
+        // expectString : "select * from " + context.table1 + " where value = \"context.table\"" + context.table
+        testString = "\"select * from \" + context.table + \" where value = \\\"context.table\\\"\" + context.table";
+        expectRetValue = "\"select * from \" + context.table1 + \" where value = \\\"context.table\\\"\" + context.table1";
+        retValue = ParameterValueUtil.splitQueryData("context.table", "context.table1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 14 : incomplete double quota
+        // testString : "select a,context.b from " + context.b + "where value = context.b
+        // expectString : "select a,context.b from " + context.b1 + "where value = context.b1
+        testString = "\"select a,context.b from \" + context.b + \"where value = context.b";
+        expectRetValue = "\"select a,context.b from \" + context.b1 + \"where value = context.b1";
+        retValue = ParameterValueUtil.splitQueryData("context.b", "context.b1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 15 : incomplete double quota
+        // testString : "select a,context.b from " + context.b + "where value = \"context.b
+        // expectString : "select a,context.b from " + context.b1 + "where value = \"context.b1
+        testString = "\"select a,context.b from \" + context.b + \"where value = \\\"context.b";
+        expectRetValue = "\"select a,context.b from \" + context.b1 + \"where value = \\\"context.b1";
+        retValue = ParameterValueUtil.splitQueryData("context.b", "context.b1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 16
+        // testString : "select * from " + context.table + " where value = \"\\" + context.table + "\\context.table\""
+        // expectString : "select * from " + context.table1 + " where value = \"\\" + context.table1 +
+        // "\\context.table\""
+        testString = "\"select * from \" + context.table + \" where value = \\\"\\\\\" + context.table + \"\\\\context.table\\\"\"";
+        expectRetValue = "\"select * from \" + context.table1 + \" where value = \\\"\\\\\" + context.table1 + \"\\\\context.table\\\"\"";
+        retValue = ParameterValueUtil.splitQueryData("context.table", "context.table1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // test case 17
+        // testString : "select * from ""context.table where value = \"\\" + context.table + "\\context.table\""
+        // expectString : "select * from ""context.table where value = \"\\" + context.table1 + "\\context.table\""
+        testString = "\"select * from \"\"context.table where value = \\\"\\\\\" + context.table + \"\\\\context.table\\\"\"";
+        expectRetValue = "\"select * from \"\"context.table where value = \\\"\\\\\" + context.table1 + \"\\\\context.table\\\"\"";
+        retValue = ParameterValueUtil.splitQueryData("context.table", "context.table1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
     }
 
 }
