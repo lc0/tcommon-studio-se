@@ -16,11 +16,13 @@ import org.talend.core.model.metadata.builder.database.EDatabaseSchemaOrCatalogM
 
 /**
  * qzhang class global comment. Detailled comment <br/>
- * 
+ *
  */
 public enum EDatabaseTypeName {
     MYSQL(
           "MySQL", "MySQL", Boolean.FALSE, "MYSQL", "MYSQL", EDatabaseSchemaOrCatalogMapping.Sid, EDatabaseSchemaOrCatalogMapping.None), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+    BIGQUERY(
+          "BigQuery", "BigQuery", Boolean.FALSE, "BigQuery", "BigQuery", EDatabaseSchemaOrCatalogMapping.Sid, EDatabaseSchemaOrCatalogMapping.None), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     PSQL(
          "PostgreSQL", "PostgreSQL", Boolean.TRUE, "POSTGRESQL", "POSTGRE", EDatabaseSchemaOrCatalogMapping.Sid, EDatabaseSchemaOrCatalogMapping.Schema), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     PLUSPSQL(
@@ -32,7 +34,7 @@ public enum EDatabaseTypeName {
     ORACLE_OCI(
                "ORACLE_OCI", "Oracle OCI", Boolean.TRUE, "ORACLE", "DBORACLE", EDatabaseSchemaOrCatalogMapping.None, EDatabaseSchemaOrCatalogMapping.Schema), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     ORACLE_CUSTOM(
-                  "ORACLE_CUSTOM", "Oracle Custom", Boolean.TRUE, "ORACLE", "DBORACLE", EDatabaseSchemaOrCatalogMapping.None, EDatabaseSchemaOrCatalogMapping.Schema), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$           
+                  "ORACLE_CUSTOM", "Oracle Custom", Boolean.TRUE, "ORACLE", "DBORACLE", EDatabaseSchemaOrCatalogMapping.None, EDatabaseSchemaOrCatalogMapping.Schema), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     GODBC(
           "Generic ODBC", "Generic ODBC", Boolean.FALSE, "ODBC", EDatabaseSchemaOrCatalogMapping.Sid, EDatabaseSchemaOrCatalogMapping.None), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     MSODBC(
@@ -251,7 +253,7 @@ public enum EDatabaseTypeName {
 
     /**
      * DOC zli Comment method "getTypeFromProductName".
-     * 
+     *
      * @param productName
      * @return
      */
@@ -269,7 +271,7 @@ public enum EDatabaseTypeName {
 
     /**
      * This is only for the component type, not for the repository.
-     * 
+     *
      * @param dbType
      * @return
      */
