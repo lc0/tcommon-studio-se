@@ -19,10 +19,11 @@ import org.junit.Test;
 /**
  * DOC cmeng class global comment. Detailled comment
  */
+@SuppressWarnings("nls")
 public class ParameterValueUtilTest {
 
     @Test
-    public void testSplitQueryData() {
+    public void testSplitQueryData4SQL() {
         String testString = null;
         String expectRetValue = null;
         String retValue = null;
@@ -34,6 +35,28 @@ public class ParameterValueUtilTest {
         expectRetValue = "context.oper+\" \"+context.schema+\".\"+context.table+\";\"";
         retValue = ParameterValueUtil.splitQueryData("context.operation", "context.oper", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+        // schema
+        expectRetValue = "context.operation+\" \"+context.db+\".\"+context.table+\";\"";
+        retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+        // table
+        expectRetValue = "context.operation+\" \"+context.schema+\".\"+context.table1+\";\"";
+        retValue = ParameterValueUtil.splitQueryData("context.table", "context.table1", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        // FIXME only normal sting, shouldn't replace??
+        retValue = ParameterValueUtil.splitQueryData("schema", "schema123", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, testString.equals(retValue));
+
+        // part of replacing
+        retValue = ParameterValueUtil.splitQueryData("text.schema", "text.schemaABC", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, testString.equals(retValue));
+
+        // same prefix
+        testString = "context.operation+\" \"+context.test1+\".\"+context.test11+\";\"";
+        expectRetValue = "context.operation+\" \"+context.test2+\".\"+context.test11+\";\"";
+        retValue = ParameterValueUtil.splitQueryData("context.test1", "context.test2", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
         // test case 1
         // testString (For bug:TDI-29092) : "drop table "+context.oracle_schema+".\"TDI_26803\""
@@ -41,40 +64,10 @@ public class ParameterValueUtilTest {
         expectRetValue = "\"drop table \"+context.oracl_schema+\".\\\"TDI_26803\\\"\"";
         retValue = ParameterValueUtil.splitQueryData("context.oracle_schema", "context.oracl_schema", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
-
-        // test case 2
-        // String which is same to the String to be replaced was contained in the testString
-        // testString :
-        // "insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"
-        testString = "\"insert into \"+context.schema+\".\"+context.table+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
-        expectRetValue = "\"insert into \"+context.db+\".\"+context.table+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
-        retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
-        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
-
-        // test case 3
-        // testString contains empty string
-        // testString :
-        // ""+"insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"
-        testString = "\"\"+\"insert into \"+context.schema+\".\"+context.table+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
-        expectRetValue = "\"\"+\"insert into \"+context.db+\".\"+context.table+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
-        retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
-        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
-
-        // test case 4
-        // testString :
-        // "insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"+""
-        testString = "\"insert into \"+context.schema+\".\"+context.table+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"+\"\"";
-        expectRetValue = "\"insert into \"+context.db+\".\"+context.table+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"+\"\"";
-        retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
-        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
-
-        // test case 5
-        // testString :
-        // "insert into "+context.schema+"."+context.table+""+"(schema, table) values(\"context.schema\", \"context.table\")"
-        testString = "\"insert into \"+context.schema+\".\"+context.table+\"\"+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
-        expectRetValue = "\"insert into \"+context.db+\".\"+context.table+\"\"+\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
-        retValue = ParameterValueUtil.splitQueryData("context.schema", "context.db", testString);
-        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+        // column, don't replace the file for SQL
+        expectRetValue = "\"drop table \"+context.oracl_schema+\".\\\"TDI_12345\\\"\"";
+        retValue = ParameterValueUtil.splitQueryData("TDI_26803", "TDI_12345", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, testString.equals(retValue)); // not changed
 
         // test case 7
         // all are empty
@@ -94,12 +87,20 @@ public class ParameterValueUtilTest {
         retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
+        expectRetValue = "\"contextA\"+context.db+\"contextB\"+context.db+\"contextCC\" + context.db+\" \"";
+        retValue = ParameterValueUtil.splitQueryData("contextC", "contextCC", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, testString.equals(retValue)); // not changed
+
         // test case 9
         // testString :
         // "contextA"+contextA+"contextB"+context+"contextC" + context+" "
         testString = "\"contextA\"+contextA+\"contextB\"+context+\"contextC\" + context+\" \"";
         expectRetValue = "\"contextA\"+contextA+\"contextB\"+context.db+\"contextC\" + context.db+\" \"";
         retValue = ParameterValueUtil.splitQueryData("context", "context.db", testString);
+        Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
+
+        expectRetValue = "\"contextA\"+contextAA+\"contextB\"+context+\"contextC\" + context+\" \"";
+        retValue = ParameterValueUtil.splitQueryData("contextA", "contextAA", testString);
         Assert.assertTrue("testSplitQueryDataCase_" + i++, expectRetValue.equals(retValue));
 
         // test case 10
@@ -197,4 +198,131 @@ public class ParameterValueUtilTest {
 
     }
 
+    @Test
+    public void testSplitQueryData4SQL_Case2() {
+        // case 2:
+        // "insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"
+        testSplitQueryData4SQL_Case2_5("testSplitQueryData4Case2", null, null, null);
+    }
+
+    @Test
+    public void testSplitQueryData4SQL_Case3() {
+        // case 3:
+        // ""+"insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"
+        testSplitQueryData4SQL_Case2_5("testSplitQueryData4Case3", "\"\"", null, null);
+    }
+
+    @Test
+    public void testSplitQueryData4SQL_Case4() {
+        // case 4:
+        // "insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"+""
+        testSplitQueryData4SQL_Case2_5("testSplitQueryData4Case4", null, null, "\"\"");
+    }
+
+    @Test
+    public void testSplitQueryData4SQL_Case5() {
+        // case 5:
+        // "insert into "+context.schema+"."+context.table+""+
+        // "(schema, table) values(\"context.schema\", \"context.table\")"
+        testSplitQueryData4SQL_Case2_5("testSplitQueryData4Case5", null, "\"\"", null);
+    }
+
+    private void testSplitQueryData4SQL_Case2_5(String message, String prefix, String mid, String suffix) {
+        if (prefix == null) {
+            prefix = "";
+        }
+        if (mid == null) {
+            mid = "";
+        }
+        if (suffix == null) {
+            suffix = "";
+        }
+
+        String testString = null;
+        String expectRetValue = null;
+        int i = 0;
+        // test case 2-5
+        // String which is same to the String to be replaced was contained in the testString
+        // testString :
+        /*
+         * case 2:
+         * "insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"
+         * 
+         * case 3: ""+"insert into "+context.schema+"."+context.table+
+         * "(schema, table) values(\"context.schema\", \"context.table\")"
+         * 
+         * 
+         * case 4:
+         * "insert into "+context.schema+"."+context.table+"(schema, table) values(\"context.schema\", \"context.table\")"
+         * +""
+         * 
+         * case 5: "insert into "+context.schema+"."+context.table+""+
+         * "(schema, table) values(\"context.schema\", \"context.table\")"
+         */
+
+        testString = "\"insert into \"+context.schema+\".\"+context.table+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        expectRetValue = "\"insert into \"+context.db+\".\"+context.table+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        assertTest(message, i++, prefix + testString + suffix, prefix + expectRetValue + suffix, "context.schema", "context.db");
+        // table
+        expectRetValue = "\"insert into \"+context.schema+\".\"+context.table111+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        assertTest(message, i++, prefix + testString + suffix, prefix + expectRetValue + suffix, "context.table",
+                "context.table111");
+        // prefix name 1
+        testString = "\"insert into \"+context.schema+\".\"+context.schematable+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        expectRetValue = "\"insert into \"+context.db+\".\"+context.schematable+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        assertTest(message, i++, prefix + testString + suffix, prefix + expectRetValue + suffix, "context.schema", "context.db");
+        // prefix name 2
+        testString = "\"insert into \"+context.schema+\".\"+context.schema_table+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        expectRetValue = "\"insert into \"+context.db+\".\"+context.schema_table+" + mid
+                + "\"(schema, table) values(\\\"context.schema\\\", \\\"context.table\\\")\"";
+        assertTest(message, i++, prefix + testString + suffix, prefix + expectRetValue + suffix, "context.schema", "context.db");
+    }
+
+    private void assertTest(String message, int index, String testString, String expectRetValue, String oldOne, String newOne) {
+        String resultValue = ParameterValueUtil.splitQueryData(oldOne, newOne, testString);
+        Assert.assertTrue(message + index, expectRetValue.equals(resultValue));
+    }
+
+    @Test
+    public void testRenameValues4GlobleMap() {
+        String testString = "((String)globalMap.get(\"tFileList_1_CURRENT_FILE\"))";
+        String expectedValue = "((String)globalMap.get(\"tFileList_2_CURRENT_FILE\"))";
+        String resultValue = ParameterValueUtil.renameValues(testString, "tFileList_1", "tFileList_2", true);
+        Assert.assertTrue(expectedValue.equals(resultValue));
+
+        //
+        testString = "((String)globalMap.get(\"tFileList_1_CURRENT_FILEDIRECTORY\"))+((String)globalMap.get(\"tFileList_1_CURRENT_FILE\"))";
+        expectedValue = "((String)globalMap.get(\"tFileList_2_CURRENT_FILEDIRECTORY\"))+((String)globalMap.get(\"tFileList_2_CURRENT_FILE\"))";
+        resultValue = ParameterValueUtil.renameValues(testString, "tFileList_1", "tFileList_2", true);
+        Assert.assertTrue(expectedValue.equals(resultValue));
+
+        //
+        testString = "((String)globalMap.get(\"tFileList_1_CURRENT_FILEDIRECTORY\"))+((String)globalMap.get(\"tFileList_11_CURRENT_FILE\"))";
+        expectedValue = "((String)globalMap.get(\"tFileList_2_CURRENT_FILEDIRECTORY\"))+((String)globalMap.get(\"tFileList_11_CURRENT_FILE\"))";
+        resultValue = ParameterValueUtil.renameValues(testString, "tFileList_1", "tFileList_2", true);
+        Assert.assertTrue(expectedValue.equals(resultValue));
+
+    }
+
+    @Test
+    public void testRenameValues4SQLAndGlobleMap() {
+        // case
+        // "select A.id, A.name form "+context.table+" A where A.name= "+((String)globalMap.get("tFileList_1_CURRENT_FILE"))
+        String testString = "\"select A.id, A.name from \"+context.table+\" A where A.name= \"+((String)globalMap.get(\"tFileList_1_CURRENT_FILE\"))";
+        String expectRetValue = "\"select A.id, A.name from \"+context.table123+\" A where A.name= \"+((String)globalMap.get(\"tFileList_1_CURRENT_FILE\"))";
+        // if flag is false, means is from SQL. but when replace the globlemap, will be problem.
+        String retValue = ParameterValueUtil.renameValues(testString, "context.table", "context.table123", false);
+        Assert.assertTrue("testRenameValues4SQLAndGlobleMap", expectRetValue.equals(retValue));
+
+        expectRetValue = "\"select A.id, A.name from \"+context.table+\" A where A.name= \"+((String)globalMap.get(\"tFileList_2_CURRENT_FILE\"))";
+        // if flag is false, means is from SQL. but when replace the globlemap, will be problem.
+        retValue = ParameterValueUtil.renameValues(testString, "tFileList_1", "tFileList_2", false);
+        Assert.assertTrue("testRenameValues4SQLAndGlobleMap", expectRetValue.equals(retValue));
+    }
 }
